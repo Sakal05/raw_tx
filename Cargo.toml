@@ -1,0 +1,20 @@
+[package]
+name = "raw_tx"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ethereum-types = "0.4.1"
+rlp = "0.5.2"
+sha3 = "0.10.1"
+rand = "0.8.4"
+hex = "0.4.3"
+fawkes-crypto-keccak256 = "0.1.1"
+ethers = "2.0.7"
+secp256k1 = "0.27.0"
+ethereum-tx-sign = "6.1.2"
+serde = "1.0.164"
+serde_derive = "1.0.164"
+bytes = "1.4.0"
