@@ -1,24 +1,26 @@
-#![deny(warnings)]
+// #![deny(warnings)]
 #![deny(clippy::all)]
 extern crate serde;
 extern crate rlp;
 extern crate secp256k1;
 
+
 use rlp::{ Encodable, RlpStream };
 use serde::Deserialize;
+use tiny_keccak::{Hasher, Keccak};
 // use serde::de::Error as SerdeErr;
 // use serde::ser::SerializeSeq;
 use serde::Serialize;
 // use serde_derive::Deserialize;
 // use serde_derive::Serialize;
 
-use secp256k1::{Message, Secp256k1, SecretKey};
+use secp256k1::{ Message, Secp256k1, SecretKey };
 // use rand::rngs::OsRng;
 // use secp256k1::{ Secp256k1, Message };
 // use ethers::prelude::*;
 
-use ethereum_tx_sign::{Transaction, EcdsaSig };
-// use serde::Serialize; 
+use ethereum_tx_sign::{ Transaction, EcdsaSig };
+// use serde::Serialize;
 
 #[derive(Debug)]
 pub enum Error {
@@ -59,7 +61,7 @@ pub fn sign_bytes<T: Transaction>(tx_type: Option<u8>, ecdsa: &EcdsaSig, t: &T) 
 
     let mut vec = rlp_stream.out().to_vec();
     if let Some(b) = tx_type {
-        vec.insert(0usize, b)
+        vec.insert(0usize, b);
     }
     vec
 }
@@ -90,20 +92,19 @@ pub struct LegacyTransaction {
     pub data: Vec<u8>,
 }
 
-impl LegacyTransaction {
-    fn ecdsa(&self, private_key: &[u8]) -> Result<EcdsaSig, Error> {
-        let hash = self.hash();
+// impl LegacyTransaction {
+//     fn ecdsa(&self, private_key: &[u8]) -> Result<EcdsaSig, Error> {
+//         let hash = self.hash();
 
-        let chain = match Self::transaction_type() {
-            Some(_) => None,
-            None => Some(self.chain()),
-        };
+//         let chain = match Self::transaction_type() {
+//             Some(_) => None,
+//             None => Some(self.chain()),
+//         };
 
-        EcdsaSig::generate(hash, private_key, chain)
-    }
+//         EcdsaSig::generate(hash, private_key, chain)
+//     }
 
-}
-
+// }
 
 impl Transaction for LegacyTransaction {
     fn chain(&self) -> u64 {
@@ -121,7 +122,7 @@ impl Transaction for LegacyTransaction {
             Box::new(self.gas_limit),
             Box::new(to),
             Box::new(self.value),
-            Box::new(self.data.clone()),
+            Box::new(self.data.clone())
         ]
     }
 
@@ -133,8 +134,7 @@ impl Transaction for LegacyTransaction {
         None
     }
 
-
-    fn ecdsa(&self, private_key: &[u8]) -> Result<EcdsaSig, Error> {
+    fn ecdsa(&self, private_key: &[u8]) -> Result<EcdsaSig, ethereum_tx_sign::Error> {
         let hash = self.hash();
 
         let chain = match Self::transaction_type() {
@@ -142,53 +142,181 @@ impl Transaction for LegacyTransaction {
             None => Some(self.chain()),
         };
 
-        let x = generate(hash, private_key, chain)
-        .map(|sig| EcdsaSig {
-            v: sig.v,
-            r: sig.r,
-            s: sig.s,
-        });
-
-        Ok(x)
-
-        
+        generate(hash, private_key, chain)
     }
-    
+
+    fn hash(&self) -> [u8; 32] {
+        let rlp = self.rlp_parts();
+        let mut rlp_stream = RlpStream::new();
+        rlp_stream.begin_unbounded_list();
+        for r in rlp.iter() {
+            rlp_stream.append(r);
+        }
+
+        // `None` means it is legacy
+        if Self::transaction_type().is_none() {
+            rlp_stream.append(&self.chain());
+            rlp_stream.append_raw(&[0x80], 1);
+            rlp_stream.append_raw(&[0x80], 1);
+        }
+
+        rlp_stream.finalize_unbounded_list();
+        let mut rlp_bytes = rlp_stream.out().to_vec();
+
+        if let Some(tt) = Self::transaction_type() {
+            rlp_bytes.insert(0usize, tt);
+        }
+
+        keccak256_hash(&rlp_bytes)
+    }
+}
+
+impl LegacyTransaction {
+    pub fn address_to_bytes(address: &str) -> Result<[u8; 20], hex::FromHexError> {
+        let address = address.trim_start_matches("0x");
+        let bytes = hex::decode(address)?;
+        let mut result = [0u8; 20];
+        result.copy_from_slice(&bytes[..20]);
+        Ok(result)
+    }
 }
 
 
-
+fn keccak256_hash(bytes: &[u8]) -> [u8; 32] {
+    let mut hasher = Keccak::v256();
+    hasher.update(bytes);
+    let mut resp: [u8; 32] = Default::default();
+    hasher.finalize(&mut resp);
+    resp
+}
+// fn keccak256_hash(bytes: &[u8]) -> [u8; 32] {
+//     let mut hasher = Keccak::v256();
+//     hasher.update(bytes);
+//     let mut resp: [u8; 32] = Default::default();
+//     hasher.finalize(&mut resp);
+//     resp
+// }
 
 pub fn generate(
-        hash: [u8; 32],
-        private_key: &[u8],
-        chain_id: Option<u64>,
-) -> Result<EcdsaSig, Error> {
+    hash: [u8; 32],
+    private_key: &[u8],
+    chain_id: Option<u64>
+) -> Result<EcdsaSig, ethereum_tx_sign::Error> {
     let s = Secp256k1::signing_only();
     let msg = Message::from_slice(&hash)?;
     let key = SecretKey::from_slice(private_key)?;
     let (v, sig_bytes) = s.sign_ecdsa_recoverable(&msg, &key).serialize_compact();
 
-    let v = v.to_i32() as u64
-        + match chain_id {
+    let v =
+        (v.to_i32() as u64) +
+        (match chain_id {
             Some(c) => c * 2 + 35,
             None => 0,
-        };
+        });
 
-    let result = EcdsaSig {
+    let ecdsa_sig = EcdsaSig {
         v,
         r: sig_bytes[0..32].to_vec(),
         s: sig_bytes[32..64].to_vec(),
     };
 
-    println!("Result: {:?}", &result);
+    println!("Sign ecdsa sig: {:?}", &ecdsa_sig);
+
+    // let mut output = Vec::new();
+    // output.extend_from_slice(&ecdsa_sig.v.to_be_bytes());
+
+    // // // Append r component without leading zeros
+    // // let mut r_trimmed = ecdsa_sig.r.clone();
+    // // while !r_trimmed.is_empty() && r_trimmed[0] == 0 {
+    // //     r_trimmed.remove(0);
+    // // }
+
+    // let mut r_n = ecdsa_sig.r.clone();
+    // let mut s_n = ecdsa_sig.s.clone();
+
+    // while r_n[0] == 0 {
+    //     r_n.remove(0);
+    // }
+    // while s_n[0] == 0 {
+    //     s_n.remove(0);
+    // }
+    // output.append(&mut r_n);
+    // output.append(&mut s_n);
+
+    // while output[0] == 0 {
+    //     output.remove(0);
+    // }
+    // // // Append s component without leading zeros
+    // // let mut s_trimmed = ecdsa_sig.s.clone();
+    // // while !s_trimmed.is_empty() && s_trimmed[0] == 0 {
+    // //     s_trimmed.remove(0);
+    // // }
+    // // output.extend(&s_trimmed);
+    // println!("vec out: {:?}", &output);
+
+    // let hex = hex::encode(&output);
+    // println!("hex: {}", &hex);
+
+    let tx = LegacyTransaction {
+      chain: 1,
+      nonce: 0,
+      to: Some([0x45; 20]),
+      value: 1000,
+       gas_price: 20 * 10u128.pow(9),
+       gas_limit: 21000,
+      data: vec![]
+     };
+
+
+
+    let t = sign_bytes(None, &ecdsa_sig, &tx);
+    let h = hex::encode(&t);
+    println!("hex of sign tx: {:?}", &h);
+     println!("Raw sign tx: {:?}", &t);
 
     Ok(EcdsaSig {
         v,
         r: sig_bytes[0..32].to_vec(),
         s: sig_bytes[32..64].to_vec(),
     })
+
+    // let mut rlp_stream = RlpStream::new();
+    // let rlp = t.rlp_parts();
+    // rlp_stream.begin_unbounded_list();
+
+    // for r in rlp.iter() {
+    //     rlp_stream.append(r);
+    // }
+
+    // let ecdsaSig = EcdsaSig {
+    //         v,
+    //         r: sig_bytes[0..32].to_vec(),
+    //         s: sig_bytes[32..64].to_vec(),
+    //     };
+
+    // // removes leading zeroes
+    // let mut r_n = ecdsaSig.r.clone();
+    // let mut s_n = ecdsaSig.s.clone();
+    // while r_n[0] == 0 {
+    //     r_n.remove(0);
+    // }
+    // while s_n[0] == 0 {
+    //     s_n.remove(0);
+    // }
+
+    // rlp_stream.append(v);
+    // rlp_stream.append(&r_n);
+    // rlp_stream.append(&s_n);
+
+    // rlp_stream.finalize_unbounded_list();
+
+    // let mut vec = rlp_stream.out().to_vec();
+    // if let Some(b) = tx_type {
+    //     vec.insert(0usize, b)
+    // }
+    // vec
 }
+
 // fn slice_u8_deserialize<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
 // where
 //     D: serde::Deserializer<'de>,
