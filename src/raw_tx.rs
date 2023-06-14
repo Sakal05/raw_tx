@@ -60,7 +60,7 @@ impl Transactions<'_> {
     result.copy_from_slice(&encode[0..32]);
 
         let hex = HEXLOWER_PERMISSIVE.encode(&result);
-    println!("Hexa value: {}", hex);
+        println!("Hexa value: {}", hex);
 
     result
     }

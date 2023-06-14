@@ -189,13 +189,6 @@ fn keccak256_hash(bytes: &[u8]) -> [u8; 32] {
     hasher.finalize(&mut resp);
     resp
 }
-// fn keccak256_hash(bytes: &[u8]) -> [u8; 32] {
-//     let mut hasher = Keccak::v256();
-//     hasher.update(bytes);
-//     let mut resp: [u8; 32] = Default::default();
-//     hasher.finalize(&mut resp);
-//     resp
-// }
 
 pub fn generate(
     hash: [u8; 32],
@@ -220,59 +213,22 @@ pub fn generate(
         s: sig_bytes[32..64].to_vec(),
     };
 
-    println!("Sign ecdsa sig: {:?}", &ecdsa_sig);
-
-    // let mut output = Vec::new();
-    // output.extend_from_slice(&ecdsa_sig.v.to_be_bytes());
-
-    // // // Append r component without leading zeros
-    // // let mut r_trimmed = ecdsa_sig.r.clone();
-    // // while !r_trimmed.is_empty() && r_trimmed[0] == 0 {
-    // //     r_trimmed.remove(0);
-    // // }
-
-    // let mut r_n = ecdsa_sig.r.clone();
-    // let mut s_n = ecdsa_sig.s.clone();
-
-    // while r_n[0] == 0 {
-    //     r_n.remove(0);
-    // }
-    // while s_n[0] == 0 {
-    //     s_n.remove(0);
-    // }
-    // output.append(&mut r_n);
-    // output.append(&mut s_n);
-
-    // while output[0] == 0 {
-    //     output.remove(0);
-    // }
-    // // // Append s component without leading zeros
-    // // let mut s_trimmed = ecdsa_sig.s.clone();
-    // // while !s_trimmed.is_empty() && s_trimmed[0] == 0 {
-    // //     s_trimmed.remove(0);
-    // // }
-    // // output.extend(&s_trimmed);
-    // println!("vec out: {:?}", &output);
-
-    // let hex = hex::encode(&output);
-    // println!("hex: {}", &hex);
-
-    let tx = LegacyTransaction {
-      chain: 1,
-      nonce: 0,
-      to: Some([0x45; 20]),
-      value: 1000,
-       gas_price: 20 * 10u128.pow(9),
-       gas_limit: 21000,
-      data: vec![]
-     };
+    // let tx = LegacyTransaction {
+    //   chain: 1,
+    //   nonce: 0,
+    //   to: Some([0x45; 20]),
+    //   value: 1000,
+    //    gas_price: 20 * 10u128.pow(9),
+    //    gas_limit: 21000,
+    //   data: vec![]
+    //  };
 
 
 
-    let t = sign_bytes(None, &ecdsa_sig, &tx);
-    let h = hex::encode(&t);
-    println!("hex of sign tx: {:?}", &h);
-     println!("Raw sign tx: {:?}", &t);
+    // let t = sign_bytes(None, &ecdsa_sig, &tx);
+    // let h = hex::encode(&t);
+    // println!("hex of sign tx: {:?}", &h);
+    //  println!("Raw sign tx: {:?}", &t);
 
     Ok(EcdsaSig {
         v,
@@ -280,41 +236,7 @@ pub fn generate(
         s: sig_bytes[32..64].to_vec(),
     })
 
-    // let mut rlp_stream = RlpStream::new();
-    // let rlp = t.rlp_parts();
-    // rlp_stream.begin_unbounded_list();
-
-    // for r in rlp.iter() {
-    //     rlp_stream.append(r);
-    // }
-
-    // let ecdsaSig = EcdsaSig {
-    //         v,
-    //         r: sig_bytes[0..32].to_vec(),
-    //         s: sig_bytes[32..64].to_vec(),
-    //     };
-
-    // // removes leading zeroes
-    // let mut r_n = ecdsaSig.r.clone();
-    // let mut s_n = ecdsaSig.s.clone();
-    // while r_n[0] == 0 {
-    //     r_n.remove(0);
-    // }
-    // while s_n[0] == 0 {
-    //     s_n.remove(0);
-    // }
-
-    // rlp_stream.append(v);
-    // rlp_stream.append(&r_n);
-    // rlp_stream.append(&s_n);
-
-    // rlp_stream.finalize_unbounded_list();
-
-    // let mut vec = rlp_stream.out().to_vec();
-    // if let Some(b) = tx_type {
-    //     vec.insert(0usize, b)
-    // }
-    // vec
+    
 }
 
 // fn slice_u8_deserialize<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>

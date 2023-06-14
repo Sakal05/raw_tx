@@ -18,7 +18,18 @@
 //     pub data: &'a str,
 //     pub chain_id: u8,
 // }
+// let unsigned_transaction = Transactions {
+    //     nonce: "0x1e7",
+    //     gas_price: "0x2e90edd000",
+    //     gas_limit: "0x30d40",
+    //     to: "0xbd064928cdd4fd67fb99917c880e6560978d7ca1",
+    //     value: "0xde0b6b3a7640000",
+    //     data: "0x",
+    // };
 
+    // let x = unsigned_transaction.encode_to_hex();
+
+    // println!("\nUnsigned tx RLP encoded: {:?}", hex::encode(x));
 // impl Encodable for TransactionChainId<'_> {
 //     fn rlp_append(&self, s: &mut RlpStream) {
 //         s.begin_list(7)
