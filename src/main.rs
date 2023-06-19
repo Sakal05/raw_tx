@@ -4,10 +4,11 @@ mod s_tx;
 mod tpae;
 // mod fetch_gas_price;
 
-use std::f32::consts::PI;
+use std::str;
 
 // use data_encoding::HEXLOWER_PERMISSIVE;
 use ethereum_tx_sign::Transaction;
+use serde::Deserialize;
 use serde_json::json;
 // use s_tx::generate;
 // use rand::Rng;
@@ -33,8 +34,10 @@ async fn main() -> anyhow::Result<()> {
     let current_nonce = get_nonce().await?;
     println!("Current nonce: {:?}", current_nonce);
     println!("Gas Price: {:?}", &gas_price);
-    let gas_est = estimate_gas().await?;
-    
+    // let gas_est = estimate_gas().await?;
+
+    //test request
+    test_request().await;
 
     let tx = LegacyTransaction {
         nonce: current_nonce,
@@ -69,6 +72,49 @@ async fn main() -> anyhow::Result<()> {
 
     //     Ok(gas_price)
     // }
+    async fn test_request() -> Result<u128, Box<dyn std::error::Error>> {
+        
+        #[derive(Deserialize)]
+        struct ApiResponse {
+            jsonrpc: String,
+            id: u32,
+            result: String,
+        }
+
+        let receipt_address = LegacyTransaction::address_to_bytes(
+            "0x5852231D8a00306A67DfB128AEd50c1573411d60"
+        ).unwrap();
+
+        let receipt_address_string = format!("0x{}", hex::encode_upper(receipt_address));
+
+        let url =
+            format!("https://api-goerli.etherscan.io/api?module=proxy&action=eth_estimateGas&data=0x&to={}&value=0x1&gasPrice=0x51da038cc&gas=0x186A0&apikey=U5U1Q3YXX6BMNJ5DJVDK4EBYRUVZS3HBZI", receipt_address_string);
+
+        // let resp = reqwest
+        //     ::get("https://api-goerli.etherscan.io/api
+        //         ?module=proxy
+        //         &action=eth_estimateGas
+        //         &data=0x
+        //         &to=0xe84d601e5d945031129a83e5602be0cc7f182cf3
+        //         &value=0x1
+        //         &gasPrice=0x51da038cc
+        //         &gas=0x186A0
+        //         &apikey=U5U1Q3YXX6BMNJ5DJVDK4EBYRUVZS3HBZI").await?
+        //     .json::<HashMap<String, String>>().await?;
+
+        let response = reqwest::get(&url).await?.json::<ApiResponse>().await?;
+        println!("jsonrpc: {}", response.jsonrpc);
+        println!("id: {}", response.id);
+        println!("result: {}", response.result);
+        let temp = &response.result.trim_start_matches("0x");
+        let gas_price_int = u128::from_str_radix(temp, 16)?;
+        // let est_gas = hex::decode(&response.result[2..])?;
+        // let gas_price_int = u128::from_str_radix(est_gas, 16)?;
+        // let text = &response.text().await?;
+        // println!("Response body: {}", text);
+
+        Ok(gas_price_int)
+    }
 
     fn attach_fuji_value(value: f64, decimal_factor: u128) -> u64 {
         let fuji_value = value * (decimal_factor as f64);
@@ -86,6 +132,7 @@ async fn main() -> anyhow::Result<()> {
             Some(gas_price) => {
                 // Decode gas price from hexadecimal to bytes
                 let temp = &gas_price.trim_start_matches("0x");
+                println!("Temp: {}", temp);
                 let gas_price_int = u128::from_str_radix(temp, 16)?;
 
                 Ok(gas_price_int)
@@ -127,14 +174,16 @@ async fn main() -> anyhow::Result<()> {
         };
         let tx_json = serde_json::to_value(&tx_json)?;
         println!("Tx json: {:?}", &tx_json);
-        let r = rpc.eth_estimate_gas(json!(&tx_json)).await.map_err(|err| anyhow::Error::msg(err.to_string()))?;
+        let r = rpc
+            .eth_estimate_gas(json!(&tx_json)).await
+            .map_err(|err| anyhow::Error::msg(err.to_string()))?;
         println!("json result: {:?}", &r);
         match r.result {
             Some(gas_price) => {
                 // Decode gas price from hexadecimal to bytes
                 let temp = &gas_price.trim_start_matches("0x");
                 let gas_price_int = u128::from_str_radix(temp, 16)?;
-                
+
                 Ok(gas_price_int)
             }
             None => Err(anyhow::anyhow!("Gas price is not available in the JSON result.")),
