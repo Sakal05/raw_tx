@@ -6,11 +6,11 @@ extern crate secp256k1;
 
 
 use rlp::{ Encodable, RlpStream };
-use serde::Deserialize;
 use tiny_keccak::{Hasher, Keccak};
 // use serde::de::Error as SerdeErr;
 // use serde::ser::SerializeSeq;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
+
 // use serde_derive::Deserialize;
 // use serde_derive::Serialize;
 

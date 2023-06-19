@@ -4,6 +4,8 @@ mod s_tx;
 mod tpae;
 // mod fetch_gas_price;
 
+use std::f32::consts::PI;
+
 // use data_encoding::HEXLOWER_PERMISSIVE;
 use ethereum_tx_sign::Transaction;
 use serde_json::json;
@@ -114,19 +116,19 @@ async fn main() -> anyhow::Result<()> {
         let receipt_address = LegacyTransaction::address_to_bytes(
             "0x5852231D8a00306A67DfB128AEd50c1573411d60"
         ).unwrap();
-        let tx_json = struct_to_json(LegacyTransaction {
-            nonce: 0,
+        let tx_json = LegacyTransaction {
+            nonce: 12,
             chain: 43113,
             to: Some(receipt_address),
-            value: 0,
-            gas_price: 0,
-            gas_limit: 0,
+            value: 12,
+            gas_price: 12,
+            gas_limit: 12,
             data: vec![0x1, 0x2],
-        });
-        // let r = rpc.eth_estimate_gas(
-        //     json!(&tx_json)
-        // ).await?;
-
+        };
+        let tx_json = serde_json::to_value(&tx_json)?;
+        println!("Tx json: {:?}", &tx_json);
+        let r = rpc.eth_estimate_gas(json!(&tx_json)).await.map_err(|err| anyhow::Error::msg(err.to_string()))?;
+        println!("json result: {:?}", &r);
         match r.result {
             Some(gas_price) => {
                 // Decode gas price from hexadecimal to bytes
@@ -137,12 +139,6 @@ async fn main() -> anyhow::Result<()> {
             }
             None => Err(anyhow::anyhow!("Gas price is not available in the JSON result.")),
         }
-    }
-
-    fn struct_to_json(tx: LegacyTransaction ) -> anyhow::Result<String>{
-        let json_string = serde_json::to_string(&tx)?;
-            
-        Ok(json_string)
     }
 
     fn private_key_to_bytes(private_key: &str) -> [u8; 32] {
