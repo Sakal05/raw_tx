@@ -92,20 +92,6 @@ pub struct LegacyTransaction {
     pub data: Vec<u8>,
 }
 
-// impl LegacyTransaction {
-//     fn ecdsa(&self, private_key: &[u8]) -> Result<EcdsaSig, Error> {
-//         let hash = self.hash();
-
-//         let chain = match Self::transaction_type() {
-//             Some(_) => None,
-//             None => Some(self.chain()),
-//         };
-
-//         EcdsaSig::generate(hash, private_key, chain)
-//     }
-
-// }
-
 impl Transaction for LegacyTransaction {
     fn chain(&self) -> u64 {
         self.chain
@@ -212,23 +198,6 @@ pub fn generate(
         r: sig_bytes[0..32].to_vec(),
         s: sig_bytes[32..64].to_vec(),
     };
-
-    // let tx = LegacyTransaction {
-    //   chain: 1,
-    //   nonce: 0,
-    //   to: Some([0x45; 20]),
-    //   value: 1000,
-    //    gas_price: 20 * 10u128.pow(9),
-    //    gas_limit: 21000,
-    //   data: vec![]
-    //  };
-
-
-
-    // let t = sign_bytes(None, &ecdsa_sig, &tx);
-    // let h = hex::encode(&t);
-    // println!("hex of sign tx: {:?}", &h);
-    //  println!("Raw sign tx: {:?}", &t);
 
     Ok(EcdsaSig {
         v,
