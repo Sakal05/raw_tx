@@ -1,3 +1,4 @@
+#![allow(warnings)]
 mod s_tx;
 // mod fetch_gas_price;
 
@@ -29,7 +30,7 @@ async fn main() -> anyhow::Result<()> {
 
     //confirm to hexa
     let hex = hex::encode(&tx_bytes);
-    println!("hex value: {:?}", hex);
+    println!("Sign Tx Hex Value: {:?}", hex);
 
     /* For testing purpose */
     // fn generate_private_key() -> [u8; 32] {
@@ -69,7 +70,7 @@ async fn new_struct() -> anyhow::Result<LegacyTransaction> {
         value: nanofuji_value as u128,
         gas_price: gas_price,
         gas_limit: 0,   //will be updated later after gas estimatation
-        data: vec![0x1, 0x2],
+        data: vec![0x1, 0x2, 0x3, 0x4, 0x5, 0x6],
     };
 
     /* Estimate Gas Price to set gas limit */
