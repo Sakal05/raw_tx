@@ -1,8 +1,10 @@
 #![allow(warnings)]
 mod s_tx;
 // mod fetch_gas_price;
-
+extern crate dotenv;
 use std::str;
+use dotenv::dotenv;
+use std::env;
 
 // use data_encoding::HEXLOWER_PERMISSIVE;
 use ethereum_tx_sign::Transaction;
@@ -15,9 +17,11 @@ use crate::s_tx::{ LegacyTransaction };
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-
+    dotenv().ok();
+    // Access environment variables
+    let k = std::env::var("PRIVATE_KEY").expect("NOT FOUND");
     let pk = private_key_to_bytes(
-        "124ce2df311216d9c6f8c417ce2258ef45df6c6e2cb12b40762d1debc8a170e4"
+       k.as_str()
     );
 
     let tx = new_struct().await?;
@@ -58,10 +62,9 @@ async fn new_struct() -> anyhow::Result<LegacyTransaction> {
     let nanofuji_value = attach_fuji_value(fuji_value, decimal_factor);
     let gas_price = get_gas_price().await?;
     let current_nonce = get_nonce().await?;
- 
+
     // println!("Current nonce: {:?}", current_nonce);
     // println!("Gas Price: {:?}", &gas_price);
-
 
     let mut tx = LegacyTransaction {
         nonce: current_nonce,
@@ -69,7 +72,7 @@ async fn new_struct() -> anyhow::Result<LegacyTransaction> {
         to: Some(receipt_address),
         value: nanofuji_value as u128,
         gas_price: gas_price,
-        gas_limit: 0,   //will be updated later after gas estimatation
+        gas_limit: 0, //will be updated later after gas estimatation
         data: vec![0x1, 0x2, 0x3, 0x4, 0x5, 0x6],
     };
 
@@ -115,9 +118,7 @@ async fn new_struct() -> anyhow::Result<LegacyTransaction> {
             println!("Error code: {}", error.code);
             println!("Error message: {:#?}", error.message);
         }
-        None => {
-            
-        }
+        None => {}
     }
 
     let temp = &response.result.trim_start_matches("0x");
@@ -125,7 +126,6 @@ async fn new_struct() -> anyhow::Result<LegacyTransaction> {
     tx.gas_limit = gas_price_int;
 
     Ok(tx)
-
 }
 
 // async fn test_request() -> anyhow::Result<u128> {
