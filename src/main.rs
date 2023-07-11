@@ -1,17 +1,19 @@
 #![allow(warnings)]
 mod s_tx;
+pub mod send_raw_tx;
+use crate::send_raw_tx::send_raw_tx;
 // mod fetch_gas_price;
 extern crate dotenv;
 use std::str;
 use dotenv::dotenv;
 use std::env;
+use web3_rpc::web3::Web3;
 
 // use data_encoding::HEXLOWER_PERMISSIVE;
 use ethereum_tx_sign::Transaction;
 use serde::Deserialize;
 // use s_tx::generate;
 // use rand::Rng;
-use web3_rpc::web3::Web3;
 // use crate::raw_tx::Transactions;
 use crate::s_tx::{ LegacyTransaction };
 
@@ -35,6 +37,15 @@ async fn main() -> anyhow::Result<()> {
     //confirm to hexa
     let hex = hex::encode(&tx_bytes);
     println!("Sign Tx Hex Value: {:?}", hex);
+
+    let hash = send_raw_tx::send_raw_tx(hex).await;
+    /* Get Transaction Receipt */
+    let h = match hash {
+        Ok(h) => h,
+        Err(e) => "0x".to_owned(),
+    };
+
+    println!("Tx Hash: {}", h);
 
     /* For testing purpose */
     // fn generate_private_key() -> [u8; 32] {
